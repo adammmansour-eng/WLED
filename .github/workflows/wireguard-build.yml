@@ -1,0 +1,33 @@
+name: Build WLED WireGuard
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - run: npm ci
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install -r requirements.txt
+
+      - run: |
+          cp usermods/platformio_override.usermods.ini platformio_override.ini
+          sed -i 's/custom_usermods = \${usermods.custom_usermods}/custom_usermods = wireguard/' platformio_override.ini
+          sed -i 's/board_build.partitions = \${esp32.extreme_partitions}/board_build.partitions = \${esp32.default_partitions}/' platformio_override.ini
+          pio run -e usermods_esp32
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WLED-16.0.1-WireGuard
+          path: build_output/release/*.bin
